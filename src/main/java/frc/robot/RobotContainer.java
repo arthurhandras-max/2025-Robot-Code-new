@@ -40,7 +40,7 @@ import frc.robot.Constants.OperatorConstants;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 // import main.java.frc.robot.commands.stopMOVING;
-import main.java.frc.robot.subsystems.Limelight2;
+import frc.robot.subsystems.Limelight2;
 
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
@@ -55,12 +55,11 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
-import com.ctre.phoenix6.swerve.SwerveRequest.RobotCentric;
 import edu.wpi.first.math.geometry.Rotation2d;
 import static edu.wpi.first.units.Units.*;
 public class RobotContainer {
 
-  // Base speed scaling constants for the swerve (meters/sec and radians/sec).
+  // Robot-specific max translational/rotational speeds (further scaled by driver speed mode).
   private final double MaxSpeed =
       TunerConstants.kSpeedAt12Volts.in(MetersPerSecond) * OperatorConstants.kSpeed;
   private final double MaxAngularRate = RotationsPerSecond.of(0.75).in(RadiansPerSecond);
@@ -80,9 +79,7 @@ public class RobotContainer {
   private final SlewRateLimiter slewLimX = new SlewRateLimiter(2.0);
   private final SlewRateLimiter slewLimRote = new SlewRateLimiter(1.0);
 
-
   // private final frc.robot.subsystems.Limelight limelight = new frc.robot.subsystems.Limelight();
-  Limelight2 lime = new Limelight2();
   // Cache last-published driver telemetry to avoid NetworkTables spam.
   private String lastMode;
   private Double lastScale;
@@ -98,7 +95,7 @@ public class RobotContainer {
   private final SendableChooser<Command> autoChooser;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
-  public RobotContainer() {
+ public RobotContainer() {
     // Seed heading at startup so field-centric drive has a sane reference.
     drivetrain.seedFieldCentric();
     configureBindings();
@@ -116,15 +113,15 @@ public class RobotContainer {
       // Fall back to a safe chooser if PathPlanner assets are missing.
       chooser = new SendableChooser<>();
       chooser.setDefaultOption("Do Nothing", new InstantCommand());
-      //.putString("autoChooser/Error", "PathPlanner chooser failed: " + ex.getMessage());
+      SmartDashboard.putString("autoChooser/Error", "PathPlanner chooser failed: " + ex.getMessage());
     }
     autoChooser = chooser;
-    //SmartDashboard.putData("autoChooser", autoChooser);
+    SmartDashboard.putData("autoChooser", autoChooser);
   }
 
   /** Define driver -> command mappings. */
   private void configureBindings() {
-    // Default command: field-centric drive with slew-limited joystick input.
+    // Default command: field-centric drive with deadbanded + slew-limited joystick input.
     drivetrain.setDefaultCommand(
         drivetrain.applyRequest(
             () ->
@@ -133,14 +130,23 @@ public class RobotContainer {
                     .withRotationalRate(slewLimRote.calculate(-joyRightX()) * MaxAngularRate)));
 
     // Vision-assisted align/target commands.
-    Rotation2d target = new Rotation2d(Limelight2.getAngleTargetRadians());
+    // Hold B: only aim when Limelight sees AprilTag ID 9; otherwise hold current heading.
     driverController.b().whileTrue(
-      drivetrain.applyRequest(() -> turn
-        .withVelocityX(0)
-        .withVelocityY(0)
-        .withTargetDirection(target))
+      drivetrain.applyRequest(() -> {
+        if (Limelight2.hasTargetWithId(9)) {
+          return turn
+            .withVelocityX(0)
+            .withVelocityY(0)
+            .withTargetDirection(new Rotation2d(Limelight2.getAngleTargetRadians()));
+        }
+        // No matching tag -> do not command a new heading change.
+        return turn
+          .withVelocityX(0)
+          .withVelocityY(0)
+          .withTargetDirection(drivetrain.getState().Pose.getRotation());
+      })
     );
-    // SysId bindings to characterize drivetrain when requested.
+    // SysId bindings to characterize drivetrain when requested (be stationary in a safe area).
     driverController.start().and(driverController.y())
         .whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
     driverController.start().and(driverController.x())
@@ -186,15 +192,18 @@ public class RobotContainer {
     double scale = Constants.OperatorConstants.normalSpeed;
     boolean rightPressed = driverController.rightBumper().getAsBoolean();
     boolean leftPressed = driverController.leftBumper().getAsBoolean();
-    if (rightPressed) {
+    // If both are held, prefer the safer slow mode.
+    if (rightPressed && leftPressed) {
       mode = "Slow";
       scale = Constants.OperatorConstants.slowSpeed;
-    }
-    if (leftPressed) {
+    } else if (rightPressed) {
+      mode = "Slow";
+      scale = Constants.OperatorConstants.slowSpeed;
+    } else if (leftPressed) {
       mode = "Fast";
       scale = Constants.OperatorConstants.fastSpeed;
     }
-    boolean modeChanged = modeChanged(rightPressed, leftPressed, scale);
+
     // pushDriverTelemetry(mode, scale, modeChanged);
     lastMode = mode;
     lastScale = scale;

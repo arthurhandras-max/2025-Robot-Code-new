@@ -1,4 +1,4 @@
-package main.java.frc.robot.subsystems;
+package frc.robot.subsystems;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.networktables.NetworkTable;
@@ -9,8 +9,6 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 
 import frc.robot.LimelightHelpers;
-
-
 
 //y is up and down, z is forward and backward, x is left and right
 
@@ -65,6 +63,27 @@ public class Limelight2 extends SubsystemBase{
     public static double getDistZ(){
         return distZ;
     }
+
+    /** True when Limelight reports a valid target (tv > 0). */
+    public static boolean hasTarget() {
+        return v > 0.5;
+    }
+
+    /** Latest horizontal angle error (tx) in radians; positive means target is to the right. */
+    public static double getTxRadians() {
+        return Math.toRadians(x);
+    }
+
+    /** Latest detected fiducial ID (-1 if none or unknown). */
+    public static int getFiducialId() {
+        return (int) LimelightHelpers.getFiducialID("limelight-lime");
+    }
+
+    /** True only when a target is present and matches the requested ID. */
+    public static boolean hasTargetWithId(int desiredId) {
+        return hasTarget() && getFiducialId() == desiredId;
+    }
+
     public static double getAngleTargetRadians(){
         return angleTargetRadians;
     }
