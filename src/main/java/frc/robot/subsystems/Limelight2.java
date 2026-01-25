@@ -45,14 +45,14 @@ public class Limelight2 extends SubsystemBase{
     }
     public void updateDashboard(){
         //post to smart dashboard periodically
-        SmartDashboard.putNumber("Limelight2XDegrees", x);
-        SmartDashboard.putNumber("Limelight2YDegrees", y);
-        SmartDashboard.putNumber("Limelight2YDegrees", v);
-        SmartDashboard.putNumber("Limelight2Area", area);
-        SmartDashboard.putNumber("Limelight2DistanceX", distX);
-        SmartDashboard.putNumber("Limelight2DistanceY", distY);
-        SmartDashboard.putNumber("Limelight2DistanceZ", distZ);
-        SmartDashboard.putNumber("Limelight2TargetYawRadians", angleTargetRadians);
+        SmartDashboard.putNumber("Limelight2/XDegrees", x);
+        SmartDashboard.putNumber("Limelight2/YDegrees", y);
+        SmartDashboard.putNumber("Limelight2/YDegrees", v);
+        SmartDashboard.putNumber("Limelight2/Area", area);
+        SmartDashboard.putNumber("Limelight2/DistanceX", distX);
+        SmartDashboard.putNumber("Limelight2/DistanceY", distY);
+        SmartDashboard.putNumber("Limelight2/DistanceZ", distZ);
+        SmartDashboard.putNumber("Limelight2/TargetYawRadians", angleTargetRadians);
     }
     @Override
     public void periodic(){

@@ -220,31 +220,31 @@ public class RobotContainer {
   }
 
   /** One-time dashboard entries that do not change at runtime. */
-  // private void publishStaticTelemetry() {
-  //   SmartDashboard.putNumber("Drive/MaxSpeedMps", MaxSpeed);
-  //   SmartDashboard.putNumber("Drive/MaxAngularRateRadPerSec", MaxAngularRate);
-  // }
+  private void publishStaticTelemetry() {
+    SmartDashboard.putNumber("Drive/MaxSpeedMps", MaxSpeed);
+    SmartDashboard.putNumber("Drive/MaxAngularRateRadPerSec", MaxAngularRate);
+  }
 
-  // /** Live driver-focused telemetry for quick debugging and mode awareness. */
-   //private void pushDriverTelemetry(String mode, double scale, boolean publishModeScale) {
-  //   if (publishModeScale) {
-  //     SmartDashboard.putString("Drive/SpeedMode", mode);
-  //     SmartDashboard.putNumber("Drive/SpeedScale", scale);
-  //}
-  //   SmartDashboard.putNumber("Joystick/LeftX", joyLeftX());
-  //   SmartDashboard.putNumber("Joystick/LeftY", joyLeftY());
-  //   SmartDashboard.putNumber("Joystick/RightX", joyRightX());
+  /** Live driver-focused telemetry for quick debugging and mode awareness. */
+   private void pushDriverTelemetry(String mode, double scale, boolean publishModeScale) {
+    if (publishModeScale) {
+      SmartDashboard.putString("Drive/SpeedMode", mode);
+      SmartDashboard.putNumber("Drive/SpeedScale", scale);
+  }
+    SmartDashboard.putNumber("Joystick/LeftX", joyLeftX());
+    SmartDashboard.putNumber("Joystick/LeftY", joyLeftY());
+    SmartDashboard.putNumber("Joystick/RightX", joyRightX());
 
-  //   var state = drivetrain.getState();
-  //   if (state != null) {
-  //     SmartDashboard.putNumber("Drive/PoseX", state.Pose.getX());
-  //     SmartDashboard.putNumber("Drive/PoseY", state.Pose.getY());
-  //     SmartDashboard.putNumber("Drive/HeadingDeg", state.Pose.getRotation().getDegrees());
-  //     SmartDashboard.putNumber("Drive/MeasuredVx", state.Speeds.vxMetersPerSecond);
-  //     SmartDashboard.putNumber("Drive/MeasuredVy", state.Speeds.vyMetersPerSecond);
-  //     SmartDashboard.putNumber("Drive/MeasuredOmega", state.Speeds.omegaRadiansPerSecond);
-  //   }
-  // }
+    var state = drivetrain.getState();
+    if (state != null) {
+      SmartDashboard.putNumber("Drive/PoseX", state.Pose.getX());
+      SmartDashboard.putNumber("Drive/PoseY", state.Pose.getY());
+      SmartDashboard.putNumber("Drive/HeadingDeg", state.Pose.getRotation().getDegrees());
+      SmartDashboard.putNumber("Drive/MeasuredVx", state.Speeds.vxMetersPerSecond);
+      SmartDashboard.putNumber("Drive/MeasuredVy", state.Speeds.vyMetersPerSecond);
+      SmartDashboard.putNumber("Drive/MeasuredOmega", state.Speeds.omegaRadiansPerSecond);
+    }
+  }
 
   /**
    * Use this to pass the autonomous command to the main {@link Robot} class.
