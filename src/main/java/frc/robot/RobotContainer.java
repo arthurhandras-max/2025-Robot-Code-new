@@ -40,12 +40,10 @@ package frc.robot;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
-// import main.java.frc.robot.commands.stopMOVING;
 import frc.robot.subsystems.Limelight2;
 
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
-// import frc.robot.commands.FaceAprilTag;
 import com.pathplanner.lib.commands.PathPlannerAuto;
 import com.pathplanner.lib.auto.AutoBuilder;
 
@@ -100,7 +98,6 @@ public class RobotContainer {
     // Seed heading at startup so field-centric drive has a sane reference.
     drivetrain.seedFieldCentric();
     configureBindings();
-    //publishStaticTelemetry();
 
     // Build a PathPlanner-backed autonomous chooser and expose it to SmartDashboard.
     SendableChooser<Command> chooser;
@@ -153,10 +150,6 @@ public class RobotContainer {
     driverController.start().and(driverController.x())
         .whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
     driverController.start().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
-    // Hold left trigger to face the nearest AprilTag using Limelight.
-    // driverController.leftTrigger().whileTrue(new FaceAprilTag(drivetrain, limelight));
-
-    // driverController.leftTrigger().whileTrue(new stopMOVING(lime, drivetrain));
 
     // Push live drivetrain telemetry to the log so you can monitor speeds, states, and odometry.
     drivetrain.registerTelemetry(logger::telemeterize);
@@ -185,7 +178,6 @@ public class RobotContainer {
     }
     return 0;
   }
-
 
   // Variable speed scaling based on bumper state (fast/slow/normal) to tame driver inputs.
   public double speedScale() {
