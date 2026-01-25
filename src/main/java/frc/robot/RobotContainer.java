@@ -5,26 +5,27 @@
 //   Left stick: strafe (field-centric X/Y)
 //   Right stick X: rotate; deadbands 0.1
 //
-// Speed modes (Drive/SpeedMode on dashboard):
-//   Right bumper = Slow (0.5)
-//   Left bumper  = Fast (1.0)
-//   Neither      = Normal (0.8)
+// Speed modes:
+//   Right bumper = Slow (0.5x)
+//   Left bumper  = Fast (1.0x)
+//   Neither      = Normal (0.8x)
 //
-// Limelight (hold-to-run):
-//   Right trigger: CenterToTagOneMeter (drive to ~1 m, center X and yaw)
-//   Left trigger:  AprilTagAim (drive/strafe/yaw to ~0.3048 m, slow near goal)
-//   Pipeline/LEDs must be set to AprilTag with LEDs on; no target -> zero output.
+// Vision assist:
+//   Hold B: If Limelight sees AprilTag ID 9, robot rotates to face it (no translation).
+//           If no tag 9 is seen, heading is held.
 //
 // Start button: reseed field-centric heading.
-// Start + Y (held): SysId quasistatic forward on drivetrain.
-// Start + X (held): SysId quasistatic reverse on drivetrain.
-// 
-// Notes:
-// Default command is field-centric drive; MaxSpeed is scaled by kSpeed=1.0.
-// SysId bindings require robot in a safe state; they override normal driving while held.
-// Limelight: Targeting is enabled/disabled inside the aim commands; 
-//This file is loacted C:\Users\Team 811\FRC\2025-Robot-Code-new\2025-Robot-Code-new\src\main\java\frc\robot
-//            Ensure the tag pipeline is active and LEDs on when using triggers.
+// Start + Y (held): SysId quasistatic forward on drivetrain (override driving while held).
+// Start + X (held): SysId quasistatic reverse on drivetrain (override driving while held).
+//
+// Autonomous:
+//   SmartDashboard chooser exposes:
+//     - Do Nothing (default)
+//     - Ex Auto (PathPlanner)
+//     - midL4x1 (PathPlanner, if present)
+//
+// Default behavior:
+//   Field-centric drive with slew rate limiting and deadbands on joystick axes.
 package frc.robot;
 
 /*
