@@ -21,6 +21,11 @@ public class LedSubsystem extends SubsystemBase {
     setOff();
   }
 
+  /** Force LEDs off (used for disabled state). */
+  public void disableLeds() {
+    setOff();
+  }
+
   /** Set all LEDs solid green. */
   public void setGreen() {
     candle.setLEDs(0, 255, 0, 0, 0, ledCount);

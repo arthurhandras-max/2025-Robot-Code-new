@@ -43,7 +43,10 @@ public class Robot extends TimedRobot {
 
   /** Invoked once when the robot transitions into Disabled mode. */
   @Override
-  public void disabledInit() {}
+  public void disabledInit() {
+    // Force LEDs off in disabled to avoid unintended signaling.
+    m_robotContainer.disableLeds();
+  }
 
   @Override
   public void disabledPeriodic() {}

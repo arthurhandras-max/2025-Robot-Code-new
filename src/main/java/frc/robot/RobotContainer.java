@@ -51,6 +51,7 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.math.filter.SlewRateLimiter;
+import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -90,6 +91,7 @@ public class RobotContainer {
   private boolean lastLeftBumper;
   private final LedSubsystem leds = new LedSubsystem(OperatorConstants.LEDId, 8);
   private final NetworkTable limelight = NetworkTableInstance.getDefault().getTable("limelight");
+  private final NetworkTableEntry limelightTv = limelight.getEntry("tv");
 
   public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
 
@@ -162,8 +164,10 @@ public class RobotContainer {
 
     // Default LED behavior: green when Limelight has a valid target (tv==1), otherwise off.
     leds.setDefaultCommand(new RunCommand(() -> {
-      double tv = limelight.getEntry("tv").getDouble(0.0);
-      if (tv == 1.0) {
+      double tv = limelightTv.getDouble(0.0);
+      boolean hasTarget = tv == 1.0;
+      SmartDashboard.putBoolean("Limelight/HasTarget", hasTarget);
+      if (hasTarget) {
         leds.setGreen();
       } else {
         leds.setOff();
@@ -221,6 +225,11 @@ public class RobotContainer {
     return scale;
   }
 
+  /** Exposed so Robot can force LEDs off when disabled. */
+  public void disableLeds() {
+    leds.disableLeds();
+  }
+
   private boolean modeChanged(boolean rightPressed, boolean leftPressed, double scale) {
     if (lastMode == null || lastScale == null) {
       return true;
@@ -235,7 +244,7 @@ public class RobotContainer {
   }
 
   /** Live driver-focused telemetry for quick debugging and mode awareness. */
-   private void pushDriverTelemetry(String mode, double scale, boolean publishModeScale) {
+  private void pushDriverTelemetry(String mode, double scale, boolean publishModeScale) {
     if (publishModeScale) {
       SmartDashboard.putString("Drive/SpeedMode", mode);
       SmartDashboard.putNumber("Drive/SpeedScale", scale);
