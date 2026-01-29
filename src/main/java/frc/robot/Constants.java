@@ -45,6 +45,7 @@ public final class Constants {
 
     // Hardware IDs and limits
     public static final double kSlipCurrent = 120; // Current threshold for slip protection
+    public static final int LEDId = 19;            // CAN ID for CANdle LED controller
     public static final int neoId = 18;            // CAN ID for NEO motor controller
     public static final int elKrakenId = 23;       // CAN ID for elevator Kraken motor
     public static final int fDoubSolC1 = 2;        // PCM channel for front double solenoid forward

@@ -40,6 +40,7 @@ package frc.robot;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
+import frc.robot.subsystems.LedSubsystem;
 import frc.robot.subsystems.Limelight2;
 
 import com.ctre.phoenix6.swerve.SwerveRequest;
@@ -47,11 +48,14 @@ import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.pathplanner.lib.commands.PathPlannerAuto;
 import com.pathplanner.lib.auto.AutoBuilder;
 
+import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -84,6 +88,8 @@ public class RobotContainer {
   private Double lastScale;
   private boolean lastRightBumper;
   private boolean lastLeftBumper;
+  private final LedSubsystem leds = new LedSubsystem(OperatorConstants.LEDId, 8);
+  private final NetworkTable limelight = NetworkTableInstance.getDefault().getTable("limelight");
 
   public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
 
@@ -153,6 +159,16 @@ public class RobotContainer {
 
     // Push live drivetrain telemetry to the log so you can monitor speeds, states, and odometry.
     drivetrain.registerTelemetry(logger::telemeterize);
+
+    // Default LED behavior: green when Limelight has a valid target (tv==1), otherwise off.
+    leds.setDefaultCommand(new RunCommand(() -> {
+      double tv = limelight.getEntry("tv").getDouble(0.0);
+      if (tv == 1.0) {
+        leds.setGreen();
+      } else {
+        leds.setOff();
+      }
+    }, leds));
   }
 
   public double joyRightX() {
