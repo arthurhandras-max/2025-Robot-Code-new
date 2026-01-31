@@ -3,6 +3,7 @@ package frc.robot.commands;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.Limelight2;
+import frc.robot.LimelightHelpers;
 import edu.wpi.first.math.util.Units;
 
 import com.ctre.phoenix6.swerve.SwerveRequest;
@@ -25,8 +26,13 @@ public class FaceAprilTag extends Command {
   private final Limelight2 limelight;
   private final PIDController yawPID;
   private final SwerveRequest.FieldCentric driveRequest = new SwerveRequest.FieldCentric();
-  private static final double MAX_ROTATE_DEG_PER_SEC = 60.0; // clamp to keep aim smooth; tune as needed
-  private static final int ON_TARGET_CYCLES_REQUIRED = 5; // debounce to avoid ending on one good frame
+  // Dedicated tag filter for this command: only consider these IDs when aiming.
+  private static final int[] TARGET_TAG_IDS = {9, 11};
+  // Pipeline index that runs AprilTag detection on the Limelight; adjust to your config.
+  private static final int TAG_PIPELINE_INDEX = 0;
+  // Faster max rate but with stronger damping and tighter tolerance to reduce overshoot.
+  private static final double MAX_ROTATE_DEG_PER_SEC = 90.0;
+  private static final int ON_TARGET_CYCLES_REQUIRED = 4; // slight reduction for snappier finish
   private int onTargetCycles = 0;
   // Slew limiter to smooth rotational rate commands near the target.
   private final edu.wpi.first.math.filter.SlewRateLimiter omegaSlew =
@@ -36,16 +42,22 @@ public class FaceAprilTag extends Command {
   public FaceAprilTag(CommandSwerveDrivetrain drivetrain, Limelight2 limelight) {
     myDrivetrain = drivetrain;
     this.limelight = limelight;
-    // PID tuned intentionally gentle: lower P/D, zero I to avoid windup when target is lost.
-    yawPID = new PIDController(0.9, 0.0, 0.10);
+    // PID: stronger P/D for quicker arrest, small I to trim bias, continuous input for wrap.
+    yawPID = new PIDController(1.4, 0.05, 0.18);
     yawPID.setSetpoint(0.0); // zero tx => aimed at tag
-    yawPID.setTolerance(3.0); // small margin of error reduces hunting and driver surprise
+    yawPID.enableContinuousInput(-180.0, 180.0);
+    yawPID.setTolerance(1.0); // tighter tolerance to stop nearer to center
     addRequirements(drivetrain, limelight);
   }
 
   /** Reset controller state each time the command is scheduled. */
   @Override
   public void initialize() {
+    // Lock the Limelight into the desired AprilTag pipeline, force LEDs on for reliable detection,
+    // and filter to specific IDs while this command is active.
+    LimelightHelpers.setPipelineIndex(Limelight2.LL_NAME, TAG_PIPELINE_INDEX);
+    LimelightHelpers.setLEDMode_ForceOn(Limelight2.LL_NAME);
+    LimelightHelpers.SetFiducialIDFiltersOverride(Limelight2.LL_NAME, TARGET_TAG_IDS);
     yawPID.reset();
     onTargetCycles = 0;
   }
@@ -88,7 +100,10 @@ public class FaceAprilTag extends Command {
   /** On exit (normal or interrupted), ensure we stop rotating. */
   @Override
   public void end(boolean interrupted) {
+    // Stop motion, mark inactive, and release tag filter so other commands see all tags again.
     myDrivetrain.setControl(driveRequest.withVelocityX(0).withVelocityY(0).withRotationalRate(0));
+    LimelightHelpers.SetFiducialIDFiltersOverride(Limelight2.LL_NAME, new int[] {});
+    LimelightHelpers.setLEDMode_PipelineControl(Limelight2.LL_NAME); // hand control back to pipeline settings
     SmartDashboard.putBoolean("FaceAprilTag/Active", false);
     SmartDashboard.putNumber("FaceAprilTag/OnTargetCycles", onTargetCycles);
   }

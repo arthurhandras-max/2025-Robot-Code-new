@@ -23,7 +23,8 @@ import frc.robot.LimelightHelpers;
  * - Fields are static for simplicity; if you add more cameras, refactor to instance state to avoid collisions.
  */
 public class Limelight2 extends SubsystemBase{
-    private static final String LL_NAME = "limelight-lime";
+    // Public so commands can refer to the correct NetworkTables instance / pipeline.
+    public static final String LL_NAME = "limelight-lime";
     NetworkTable table2;
     static double x, y, area, distX, distY, distZ, angleTargetRadians, v, robotYaw;
     int fiducialID;
