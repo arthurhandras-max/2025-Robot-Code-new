@@ -61,9 +61,11 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import static edu.wpi.first.units.Units.*;
 public class RobotContainer {
 
+  /** Maximum translational speed (m/s) scaled by operator speed factor. */
   // Base speed scaling constants for the swerve (meters/sec and radians/sec).
   private final double MaxSpeed =
       TunerConstants.kSpeedAt12Volts.in(MetersPerSecond) * OperatorConstants.kSpeed;
+  /** Maximum rotational speed (rad/s) for driver rotation input. */
   private final double MaxAngularRate = RotationsPerSecond.of(0.75).in(RadiansPerSecond);
 
   // Swerve request object reused by driver bindings.
@@ -72,6 +74,7 @@ public class RobotContainer {
       .withRotationalDeadband(MaxAngularRate * 0.1)
       .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
 
+  // Unused (kept for potential robot-centric turning use cases).
   private final RobotCentric turn = new SwerveRequest.RobotCentric()
     .withDeadband(MaxSpeed*0.05).withRotationalDeadband(MaxAngularRate*0.1)
     .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
@@ -84,7 +87,7 @@ public class RobotContainer {
 
 
   // private final frc.robot.subsystems.Limelight limelight = new frc.robot.subsystems.Limelight();
-  Limelight2 lime = new Limelight2();
+  private final Limelight2 lime = new Limelight2();
   // Cache last-published driver telemetry to avoid NetworkTables spam.
   private String lastMode;
   private Double lastScale;
@@ -99,7 +102,9 @@ public class RobotContainer {
 
   private final SendableChooser<Command> autoChooser;
 
-  /** The container for the robot. Contains subsystems, OI devices, and commands. */
+  /**
+   * Constructs the robot container: builds subsystems, seeds heading, binds controls, and prepares autos.
+   */
   public RobotContainer() {
     // Seed heading at startup so field-centric drive has a sane reference.
     drivetrain.seedFieldCentric();
@@ -121,10 +126,13 @@ public class RobotContainer {
       //.putString("autoChooser/Error", "PathPlanner chooser failed: " + ex.getMessage());
     }
     autoChooser = chooser;
-    //SmartDashboard.putData("autoChooser", autoChooser);
+    // Expose chooser so drivers can pick autonomous in the dashboard.
+    SmartDashboard.putData("Mode/autoChooser", autoChooser);
   }
 
-  /** Define driver -> command mappings. */
+  /**
+   * Wire driver controls to commands. Sets the default drive command and bindings for vision and SysId.
+   */
   private void configureBindings() {
     // Default command: field-centric drive with slew-limited joystick input.
     drivetrain.setDefaultCommand(
@@ -135,7 +143,7 @@ public class RobotContainer {
                     .withRotationalRate(slewLimRote.calculate(-joyRightX()) * MaxAngularRate)));
 
     // Vision-assisted align/target commands.
-    driverController.b().onTrue(new FaceAprilTag(drivetrain, Limelight2.getAngleTargetDegrees()));
+    driverController.b().onTrue(new FaceAprilTag(drivetrain, lime));
     
     // SysId bindings to characterize drivetrain when requested.
     driverController.start().and(driverController.y())
@@ -152,6 +160,10 @@ public class RobotContainer {
     drivetrain.registerTelemetry(logger::telemeterize);
   }
 
+  /**
+   * Driver right stick X with deadband applied.
+   * @return rotation input in -1..1, zeroed inside deadband
+   */
   public double joyRightX() {
     double rightX = driverController.getRightX();
     if (Math.abs(rightX) > OperatorConstants.kJoyRightXDeadzone) {
@@ -160,6 +172,10 @@ public class RobotContainer {
     return 0;
   }
 
+  /**
+   * Driver left stick X with deadband applied.
+   * @return strafe input in -1..1, zeroed inside deadband
+   */
   public double joyLeftX() {
     double leftX = driverController.getLeftX();
     if (Math.abs(leftX) > OperatorConstants.kJoyLeftXDeadzone) {
@@ -168,6 +184,10 @@ public class RobotContainer {
     return 0;
   }
 
+  /**
+   * Driver left stick Y with deadband applied.
+   * @return forward/back input in -1..1, zeroed inside deadband
+   */
   public double joyLeftY() {
     double leftY = driverController.getLeftY();
     if (Math.abs(leftY) > OperatorConstants.kJoyLeftYDeadzone) {
@@ -178,6 +198,10 @@ public class RobotContainer {
 
 
   // Variable speed scaling based on bumper state (fast/slow/normal) to tame driver inputs.
+  /**
+   * Computes current speed scale based on bumper state.
+   * @return scalar multiplier applied to translational/rotational commands
+   */
   public double speedScale() {
     String mode = "Normal";
     double scale = Constants.OperatorConstants.normalSpeed;
@@ -192,7 +216,11 @@ public class RobotContainer {
       scale = Constants.OperatorConstants.fastSpeed;
     }
     boolean modeChanged = modeChanged(rightPressed, leftPressed, scale);
-    // pushDriverTelemetry(mode, scale, modeChanged);
+    // Debug telemetry: surface current speed mode/scale to the dashboard.
+    if (modeChanged) {
+      SmartDashboard.putString("Drive/SpeedMode", mode);
+      SmartDashboard.putNumber("Drive/SpeedScale", scale);
+    }
     lastMode = mode;
     lastScale = scale;
     lastRightBumper = rightPressed;
@@ -200,6 +228,10 @@ public class RobotContainer {
     return scale;
   }
 
+  /**
+   * Detects if speed mode changed (used to gate telemetry updates).
+   * @return true if bumper state or scale differ from last check
+   */
   private boolean modeChanged(boolean rightPressed, boolean leftPressed, double scale) {
     if (lastMode == null || lastScale == null) {
       return true;
@@ -208,31 +240,31 @@ public class RobotContainer {
   }
 
   /** One-time dashboard entries that do not change at runtime. */
-  // private void publishStaticTelemetry() {
-  //   SmartDashboard.putNumber("Drive/MaxSpeedMps", MaxSpeed);
-  //   SmartDashboard.putNumber("Drive/MaxAngularRateRadPerSec", MaxAngularRate);
-  // }
+  private void publishStaticTelemetry() {
+    SmartDashboard.putNumber("Drive/MaxSpeedMps", MaxSpeed);
+    SmartDashboard.putNumber("Drive/MaxAngularRateRadPerSec", MaxAngularRate);
+  }
 
-  // /** Live driver-focused telemetry for quick debugging and mode awareness. */
-   //private void pushDriverTelemetry(String mode, double scale, boolean publishModeScale) {
-  //   if (publishModeScale) {
-  //     SmartDashboard.putString("Drive/SpeedMode", mode);
-  //     SmartDashboard.putNumber("Drive/SpeedScale", scale);
-  //}
-  //   SmartDashboard.putNumber("Joystick/LeftX", joyLeftX());
-  //   SmartDashboard.putNumber("Joystick/LeftY", joyLeftY());
-  //   SmartDashboard.putNumber("Joystick/RightX", joyRightX());
+  /** Live driver-focused telemetry for quick debugging and mode awareness. */
+   private void pushDriverTelemetry(String mode, double scale, boolean publishModeScale) {
+    if (publishModeScale) {
+      SmartDashboard.putString("Drive/SpeedMode", mode);
+      SmartDashboard.putNumber("Drive/SpeedScale", scale);
+  }
+    SmartDashboard.putNumber("Joystick/LeftX", joyLeftX());
+    SmartDashboard.putNumber("Joystick/LeftY", joyLeftY());
+    SmartDashboard.putNumber("Joystick/RightX", joyRightX());
 
-  //   var state = drivetrain.getState();
-  //   if (state != null) {
-  //     SmartDashboard.putNumber("Drive/PoseX", state.Pose.getX());
-  //     SmartDashboard.putNumber("Drive/PoseY", state.Pose.getY());
-  //     SmartDashboard.putNumber("Drive/HeadingDeg", state.Pose.getRotation().getDegrees());
-  //     SmartDashboard.putNumber("Drive/MeasuredVx", state.Speeds.vxMetersPerSecond);
-  //     SmartDashboard.putNumber("Drive/MeasuredVy", state.Speeds.vyMetersPerSecond);
-  //     SmartDashboard.putNumber("Drive/MeasuredOmega", state.Speeds.omegaRadiansPerSecond);
-  //   }
-  // }
+    var state = drivetrain.getState();
+    if (state != null) {
+      SmartDashboard.putNumber("Drive/PoseX", state.Pose.getX());
+      SmartDashboard.putNumber("Drive/PoseY", state.Pose.getY());
+      SmartDashboard.putNumber("Drive/HeadingDeg", state.Pose.getRotation().getDegrees());
+      SmartDashboard.putNumber("Drive/MeasuredVx", state.Speeds.vxMetersPerSecond);
+      SmartDashboard.putNumber("Drive/MeasuredVy", state.Speeds.vyMetersPerSecond);
+      SmartDashboard.putNumber("Drive/MeasuredOmega", state.Speeds.omegaRadiansPerSecond);
+    }
+  }
 
   /**
    * Use this to pass the autonomous command to the main {@link Robot} class.
@@ -241,15 +273,9 @@ public class RobotContainer {
    */
   public Command getAutonomousCommand() {
     Command selected = autoChooser.getSelected();
-    if (selected != null) {
-      return selected;
-    }
-    return new InstantCommand();
+    return selected != null ? selected : new InstantCommand();
   }
 }
-
-
-
 
 
 
