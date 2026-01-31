@@ -57,7 +57,6 @@ import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import com.ctre.phoenix6.swerve.SwerveRequest.RobotCentric;
-import edu.wpi.first.math.geometry.Rotation2d;
 import static edu.wpi.first.units.Units.*;
 public class RobotContainer {
 
@@ -74,10 +73,6 @@ public class RobotContainer {
       .withRotationalDeadband(MaxAngularRate * 0.1)
       .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
 
-  // Unused (kept for potential robot-centric turning use cases).
-  private final RobotCentric turn = new SwerveRequest.RobotCentric()
-    .withDeadband(MaxSpeed*0.05).withRotationalDeadband(MaxAngularRate*0.1)
-    .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
   private final Telemetry logger = new Telemetry(MaxSpeed);
 
   // Slew limiters tame acceleration in each axis/rotation to keep the robot smooth.
@@ -101,6 +96,7 @@ public class RobotContainer {
       new CommandXboxController(OperatorConstants.kDriverControllerPort);
 
   private final SendableChooser<Command> autoChooser;
+  private boolean sysIdActive = false;
 
   /**
    * Constructs the robot container: builds subsystems, seeds heading, binds controls, and prepares autos.
@@ -109,7 +105,7 @@ public class RobotContainer {
     // Seed heading at startup so field-centric drive has a sane reference.
     drivetrain.seedFieldCentric();
     configureBindings();
-    //publishStaticTelemetry();
+    publishStaticTelemetry();
 
     // Build a PathPlanner-backed autonomous chooser and expose it to SmartDashboard.
     SendableChooser<Command> chooser;
@@ -123,7 +119,7 @@ public class RobotContainer {
       // Fall back to a safe chooser if PathPlanner assets are missing.
       chooser = new SendableChooser<>();
       chooser.setDefaultOption("Do Nothing", new InstantCommand());
-      //.putString("autoChooser/Error", "PathPlanner chooser failed: " + ex.getMessage());
+      SmartDashboard.putString("Mode/autoChooser/Error", "PathPlanner chooser failed: " + ex.getMessage());
     }
     autoChooser = chooser;
     // Expose chooser so drivers can pick autonomous in the dashboard.
@@ -138,19 +134,27 @@ public class RobotContainer {
     drivetrain.setDefaultCommand(
         drivetrain.applyRequest(
             () ->
-                drive.withVelocityX(slewLimY.calculate(-joyLeftY()) * MaxSpeed * speedScale())
-                    .withVelocityY(slewLimX.calculate(joyLeftX()) * MaxSpeed * speedScale())
-                    .withRotationalRate(slewLimRote.calculate(-joyRightX()) * MaxAngularRate)));
+                {
+                  double scale = speedScale(); // cache per loop to avoid inconsistent scaling and extra NT writes
+                  return drive.withVelocityX(slewLimY.calculate(-joyLeftY()) * MaxSpeed * scale)
+                      .withVelocityY(slewLimX.calculate(joyLeftX()) * MaxSpeed * scale)
+                      .withRotationalRate(slewLimRote.calculate(-joyRightX()) * MaxAngularRate * scale);
+                }));
 
     // Vision-assisted align/target commands.
     driverController.b().onTrue(new FaceAprilTag(drivetrain, lime));
     
     // SysId bindings to characterize drivetrain when requested.
     driverController.start().and(driverController.y())
-        .whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
+        .whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward).finallyDo((interrupted) -> sysIdActive = false))
+        .onTrue(new InstantCommand(() -> sysIdActive = true));
     driverController.start().and(driverController.x())
-        .whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
-    driverController.start().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
+        .whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse).finallyDo((interrupted) -> sysIdActive = false))
+        .onTrue(new InstantCommand(() -> sysIdActive = true));
+    driverController.start()
+        .and(driverController.y().negate())
+        .and(driverController.x().negate())
+        .onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
     // Hold left trigger to face the nearest AprilTag using Limelight.
     // driverController.leftTrigger().whileTrue(new FaceAprilTag(drivetrain, limelight));
 
@@ -217,10 +221,7 @@ public class RobotContainer {
     }
     boolean modeChanged = modeChanged(rightPressed, leftPressed, scale);
     // Debug telemetry: surface current speed mode/scale to the dashboard.
-    if (modeChanged) {
-      SmartDashboard.putString("Drive/SpeedMode", mode);
-      SmartDashboard.putNumber("Drive/SpeedScale", scale);
-    }
+    pushDriverTelemetry(mode, scale, modeChanged);
     lastMode = mode;
     lastScale = scale;
     lastRightBumper = rightPressed;
@@ -250,7 +251,9 @@ public class RobotContainer {
     if (publishModeScale) {
       SmartDashboard.putString("Drive/SpeedMode", mode);
       SmartDashboard.putNumber("Drive/SpeedScale", scale);
-  }
+    }
+    SmartDashboard.putNumber("Drive/RotationScale", scale);
+    SmartDashboard.putBoolean("SysId/Running", sysIdActive);
     SmartDashboard.putNumber("Joystick/LeftX", joyLeftX());
     SmartDashboard.putNumber("Joystick/LeftY", joyLeftY());
     SmartDashboard.putNumber("Joystick/RightX", joyRightX());
@@ -276,7 +279,3 @@ public class RobotContainer {
     return selected != null ? selected : new InstantCommand();
   }
 }
-
-
-
-

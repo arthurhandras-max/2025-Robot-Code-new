@@ -18,11 +18,12 @@ import frc.robot.LimelightHelpers;
  * Thin wrapper around the Limelight NetworkTables/JSON helpers.
  * Periodically snapshots Limelight values into static fields for easy access by commands.
  * Notes:
- * - Assumes Limelight name "limelight-lime"; change here if your table name differs.
++ * - Assumes Limelight name "limelight-lime"; change here if your table name differs.
  * - Data is only fresh when this subsystem is scheduled; keep it registered in the robot container.
  * - Fields are static for simplicity; if you add more cameras, refactor to instance state to avoid collisions.
  */
 public class Limelight2 extends SubsystemBase{
+    private static final String LL_NAME = "limelight-lime";
     NetworkTable table2;
     static double x, y, area, distX, distY, distZ, angleTargetRadians, v, robotYaw;
     int fiducialID;
@@ -31,7 +32,7 @@ public class Limelight2 extends SubsystemBase{
     Rotation3d targetRotation, botRotation;
     
     public Limelight2(){
-        table2 = NetworkTableInstance.getDefault().getTable("limelight-lime");
+        table2 = NetworkTableInstance.getDefault().getTable(LL_NAME);
         tx = table2.getEntry("tx");
         ty = table2.getEntry("ty");
         ta = table2.getEntry("ta");
@@ -59,19 +60,19 @@ public class Limelight2 extends SubsystemBase{
             return;
         }
 
-        targetPose = LimelightHelpers.getTargetPose3d_RobotSpace("limelight-lime");
+        targetPose = LimelightHelpers.getTargetPose3d_RobotSpace(LL_NAME);
         distX = targetPose.getX();
         distY = targetPose.getY();
         distZ = targetPose.getZ();
 
-        botPose = LimelightHelpers.getBotPose3d_wpiBlue("limelight-lime");
+        botPose = LimelightHelpers.getBotPose3d_wpiBlue(LL_NAME);
         botRotation = botPose.getRotation();
         robotYaw = botRotation.getZ();
 
         targetRotation = targetPose.getRotation();
         angleTargetRadians = targetRotation.getZ();
 
-        fiducialID = (int)LimelightHelpers.getFiducialID("limelight-lime");
+        fiducialID = (int)LimelightHelpers.getFiducialID(LL_NAME);
     }
     /**
      * Publishes current snapshot to SmartDashboard. Keeps keys namespaced under "Limelight2/".
@@ -86,6 +87,9 @@ public class Limelight2 extends SubsystemBase{
         SmartDashboard.putNumber("Limelight2/DistanceY", distY);
         SmartDashboard.putNumber("Limelight2/DistanceZ", distZ);
         SmartDashboard.putNumber("Limelight2/TargetYawRadians", angleTargetRadians);
+        SmartDashboard.putNumber("Limelight2/FiducialId", fiducialID);
+        SmartDashboard.putNumber("Limelight2/RobotYawRadians", robotYaw);
+        SmartDashboard.putString("Limelight2/Status", v > 0.5 ? "Target Acquired" : "No Target");
     }
     @Override
     public void periodic(){
