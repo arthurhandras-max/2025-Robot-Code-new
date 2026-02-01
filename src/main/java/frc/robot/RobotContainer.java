@@ -149,7 +149,7 @@ public class RobotContainer {
     driverController.rightTrigger().whileTrue(new ShootToAprilTag(shooter, limeShooter));
     
     //-- CLIMBER VISION -- Vision-assisted align/target commands.
-    //driverController.y().whileTrue(new FaceTowerClimber(drivetrain, limeClimber));
+    //driverController.y().whileTrue(new FaceTowerClimber(drivetrain, limeClimber)); //TODO: Implement climber vision command.
 
     // SysId bindings to characterize drivetrain when requested.
     driverController.start().and(driverController.y())
