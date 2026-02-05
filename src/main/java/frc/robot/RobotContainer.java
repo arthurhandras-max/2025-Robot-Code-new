@@ -90,8 +90,8 @@ public class RobotContainer {
   // Cache last-published driver telemetry to avoid NetworkTables spam.
   private String lastMode;
   private Double lastScale;
-  private boolean lastRightBumper;
-  private boolean lastLeftBumper;
+  private enum SpeedMode { SLOW, NORMAL, FAST }
+  private SpeedMode speedMode = SpeedMode.NORMAL;
 
   public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
 
@@ -141,7 +141,8 @@ public class RobotContainer {
                 {
                   double scale = speedScale(); // cache per loop to avoid inconsistent scaling and extra NT writes
                   return drive.withVelocityX(slewLimY.calculate(-joyLeftY()) * MaxSpeed * scale)
-                      .withVelocityY(slewLimX.calculate(joyLeftX()) * MaxSpeed * scale)
+                      // Field-centric: +Y is left. Negate stick X so pushing right moves right.
+                      .withVelocityY(slewLimX.calculate(-joyLeftX()) * MaxSpeed * scale)
                       .withRotationalRate(slewLimRote.calculate(-joyRightX()) * MaxAngularRate * scale);
                 }));
 
@@ -153,6 +154,12 @@ public class RobotContainer {
     driverController.b().whileTrue(new FaceAprilTag(drivetrain, limeShooter));
     // Map right trigger to distance-based shooter feed using Limelight range.
     driverController.rightTrigger().whileTrue(new ShootToAprilTag(shooter, limeShooter));
+
+    //-- SPEED MODE TOGGLES --
+    // Toggle slow mode on right bumper press; press again to return to normal.
+    driverController.rightBumper().onTrue(new InstantCommand(this::toggleSlow));
+    // Toggle fast mode on left bumper press; press again to return to normal.
+    driverController.leftBumper().onTrue(new InstantCommand(this::toggleFast));
     
     //-- CLIMBER VISION -- Vision-assisted align/target commands.
     //driverController.y().whileTrue(new FaceTowerClimber(drivetrain, limeClimber)); //TODO: Implement climber vision command.
@@ -185,6 +192,17 @@ public class RobotContainer {
     return 0;
   }
 
+  // Toggle helpers to latch speed mode on bumper presses.
+  private void toggleSlow() {
+    // If already slow, go back to normal; otherwise enter slow.
+    speedMode = (speedMode == SpeedMode.SLOW) ? SpeedMode.NORMAL : SpeedMode.SLOW;
+  }
+
+  private void toggleFast() {
+    // If already fast, go back to normal; otherwise enter fast.
+    speedMode = (speedMode == SpeedMode.FAST) ? SpeedMode.NORMAL : SpeedMode.FAST;
+  }
+
   /**
    * Driver left stick X with deadband applied.
    * @return strafe input in -1..1, zeroed inside deadband
@@ -212,41 +230,37 @@ public class RobotContainer {
 
   // Variable speed scaling based on bumper state (fast/slow/normal) to tame driver inputs.
   /**
-   * Computes current speed scale based on bumper state.
+   * Computes current speed scale based on latched speedMode (toggled via bumpers).
    * @return scalar multiplier applied to translational/rotational commands
    */
   public double speedScale() {
-    String mode = "Normal";
-    double scale = Constants.OperatorConstants.normalSpeed;
-    boolean rightPressed = driverController.rightBumper().getAsBoolean();
-    boolean leftPressed = driverController.leftBumper().getAsBoolean();
-    if (rightPressed) {
-      mode = "Slow";
-      scale = Constants.OperatorConstants.slowSpeed;
-    }
-    if (leftPressed) {
-      mode = "Fast";
-      scale = Constants.OperatorConstants.fastSpeed;
-    }
-    boolean modeChanged = modeChanged(rightPressed, leftPressed, scale);
+    String mode = switch (speedMode) {
+      case SLOW -> "Slow";
+      case FAST -> "Fast";
+      default -> "Normal";
+    };
+    double scale = switch (speedMode) {
+      case SLOW -> Constants.OperatorConstants.slowSpeed;
+      case FAST -> Constants.OperatorConstants.fastSpeed;
+      default -> Constants.OperatorConstants.normalSpeed;
+    };
+    boolean modeChanged = modeChanged(scale, mode);
     // Debug telemetry: surface current speed mode/scale to the dashboard.
     pushDriverTelemetry(mode, scale, modeChanged);
     lastMode = mode;
     lastScale = scale;
-    lastRightBumper = rightPressed;
-    lastLeftBumper = leftPressed;
     return scale;
   }
 
   /**
    * Detects if speed mode changed (used to gate telemetry updates).
-   * @return true if bumper state or scale differ from last check
+   * @return true if mode or scale differ from last check
    */
-  private boolean modeChanged(boolean rightPressed, boolean leftPressed, double scale) {
+  private boolean modeChanged(double scale, String mode) {
     if (lastMode == null || lastScale == null) {
       return true;
     }
-    return rightPressed != lastRightBumper || leftPressed != lastLeftBumper || scale != lastScale;
+    return !mode.equals(lastMode) || scale != lastScale;
   }
 
   /** One-time dashboard entries that do not change at runtime. */
