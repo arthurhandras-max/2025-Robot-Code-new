@@ -67,7 +67,7 @@ public class FaceAprilTag extends Command {
   @Override
   public void execute() {
     // If no target, hold still to avoid spinning on stale data.
-    if (LimelightShooter.getTV() == 0) {
+    if (LimelightShooter.hasTarget() == false) {
       yawPID.reset(); // clear accumulated error when target is lost
       onTargetCycles = 0;
       myDrivetrain.setControl(
@@ -82,6 +82,11 @@ public class FaceAprilTag extends Command {
     double omegaRad = Units.degreesToRadians(MathUtil.clamp(omegaDeg, -MAX_ROTATE_DEG_PER_SEC, MAX_ROTATE_DEG_PER_SEC));
     omegaRad = omegaSlew.calculate(omegaRad);
 
+    double pidErrorDeg = yawPID.getPositionError();
+    boolean atSetpoint = yawPID.atSetpoint();
+    double tv = LimelightShooter.getTV();
+    double pipeline = LimelightHelpers.getCurrentPipelineIndex(LimelightShooter.LL_NAME);
+
     myDrivetrain.setControl(
         driveRequest.withVelocityX(0).withVelocityY(0).withRotationalRate(omegaRad));
 
@@ -89,9 +94,13 @@ public class FaceAprilTag extends Command {
     SmartDashboard.putBoolean("FaceAprilTag/Active", true);
     SmartDashboard.putNumber("FaceAprilTag/TxDegrees", txDeg);
     SmartDashboard.putNumber("FaceAprilTag/OmegaCmdRad", omegaRad);
+    SmartDashboard.putNumber("FaceAprilTag/PidErrorDeg", pidErrorDeg);
+    SmartDashboard.putBoolean("FaceAprilTag/AtSetpoint", atSetpoint);
+    SmartDashboard.putNumber("FaceAprilTag/TvRaw", tv);
+    SmartDashboard.putNumber("FaceAprilTag/Pipeline", pipeline);
 
     // Track on-target dwell to prevent a single good frame from ending the command.
-    if (yawPID.atSetpoint()) {
+    if (atSetpoint) {
       onTargetCycles++;
     } else {
       onTargetCycles = 0;
@@ -113,6 +122,6 @@ public class FaceAprilTag extends Command {
   @Override
   public boolean isFinished() {
     // Do not finish if no valid target; otherwise stop when within tolerance.
-    return LimelightShooter.getTV() != 0 && onTargetCycles >= ON_TARGET_CYCLES_REQUIRED;
+    return LimelightShooter.hasTarget() == true && onTargetCycles >= ON_TARGET_CYCLES_REQUIRED;
   }
 }

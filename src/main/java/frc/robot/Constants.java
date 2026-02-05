@@ -61,4 +61,16 @@ public final class Constants {
     public static final int shooterTopId     = 26;
     public static final int shooterBottomId  = 27;
   }
+
+  /** Hardware mapping and tunables for the CANdle LED controller. */
+  public static final class CANdleConstants {
+    private CANdleConstants() {}
+
+    // Set this to the CAN ID configured for your CANdle in Phoenix Tuner.
+    public static final int candleCanId = 30;
+    // Number of LEDs to drive. For a bare CANdle with only the built-in RGBs, this is 8.
+    public static final int ledCount = 8;
+    // Limelight pipeline index this indicator should watch (0 = AprilTag pipeline in this project).
+    public static final int pipelineIndex = 0;
+  }
 }

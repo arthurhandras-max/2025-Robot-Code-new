@@ -30,7 +30,7 @@ package frc.robot;
 /*
  * File Overview: Central wiring hub for subsystems, commands, and driver controls.
  * Features/Details:
- * - Creates drivetrain (CTRE swerve), Limelight, telemetry logger, and autonomous chooser.
+ * - Creates drivetrain (CTRE swerve), Limelight, CANdle LEDs, telemetry logger, and autonomous chooser.
  * - Defines driver Xbox bindings: field-centric default drive, speed modes via bumpers, vision assists on triggers, SysId on start+X/Y.
  * - Applies joystick deadbands/slew rate limiting and speed scaling for smooth control.
  * - Publishes driver-facing telemetry (speed mode/scale, joystick values, pose, velocities) to SmartDashboard.
@@ -44,6 +44,8 @@ import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.LimelightShooter;
 import frc.robot.subsystems.LimelightClimber;
 import frc.robot.subsystems.Shooter;
+import frc.robot.subsystems.CandleLED;
+import frc.robot.commands.LimelightCandleIndicator;
 
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
@@ -83,6 +85,7 @@ public class RobotContainer {
   private final LimelightShooter limeShooter = new LimelightShooter(); // primary LL (scoring/AprilTag aim)
   private final LimelightClimber limeClimber = new LimelightClimber(); // secondary LL4 for climber/stage
   private final Shooter shooter = new Shooter();
+  private final CandleLED candle = new CandleLED(Constants.CANdleConstants.candleCanId, Constants.CANdleConstants.ledCount);
 
   // Cache last-published driver telemetry to avoid NetworkTables spam.
   private String lastMode;
@@ -141,6 +144,9 @@ public class RobotContainer {
                       .withVelocityY(slewLimX.calculate(joyLeftX()) * MaxSpeed * scale)
                       .withRotationalRate(slewLimRote.calculate(-joyRightX()) * MaxAngularRate * scale);
                 }));
+
+    // Default LED indicator: turn CANdle green when shooter Limelight sees a target on the watched pipeline.
+    candle.setDefaultCommand(new LimelightCandleIndicator(limeShooter, candle, Constants.CANdleConstants.pipelineIndex));
 
     //-- SHOOTER VISION -- Vision-assisted align/target commands.
     // Run face-to-tag only while B is held so driver regains control on release.
