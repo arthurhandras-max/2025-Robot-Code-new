@@ -40,7 +40,7 @@ public final class Constants {
 
     // Driver speed scaling presets
     public static final double fastSpeed     = 1.0; // Driver fast speed preset
-    public static final double slowSpeed     = 0.5; // Driver slow speed preset
+    public static final double slowSpeed     = 0.3; // Driver slow speed preset
     public static final double normalSpeed   = 0.8; // Driver normal speed preset
 
     // Hardware IDs and limits

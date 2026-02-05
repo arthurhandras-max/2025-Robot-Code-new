@@ -5,24 +5,28 @@
 //   Left stick: strafe (field-centric X/Y)
 //   Right stick X: rotate; deadbands 0.1
 //
-// Speed modes (Drive/SpeedMode on dashboard):
-//   Right bumper = Slow (0.5)
-//   Left bumper  = Fast (1.0)
-//   Neither      = Normal (0.8)
+// Speed modes (Drive/SpeedMode on dashboard) - TOGGLES (press once to latch):
+//   Right bumper press toggles Slow (0.5) <-> Normal (0.8)
+//   Left bumper  press toggles Fast (1.0) <-> Normal (0.8)
+//   Scale applies to translation and rotation; current mode/scale published to SmartDashboard.
 //
-// LimelightShooter (hold-to-run):
+// LimelightShooter assists (hold-to-run while button held):
+//   B button: FaceAprilTag (rotate in place to center LL tx on tags 9/11)
 //   Right trigger: CenterToTagOneMeter (drive to ~1 m, center X and yaw)
 //   Left trigger:  AprilTagAim (drive/strafe/yaw to ~0.3048 m, slow near goal)
-//   Pipeline/LEDs must be set to AprilTag with LEDs on; no target -> zero output.
+//   Note: FaceAprilTag forces TAG_PIPELINE_INDEX and filters to TARGET_TAG_IDS (9,11 by default).
 //
-// Start button: reseed field-centric heading.
-// Start + Y (held): SysId quasistatic forward on drivetrain.
-// Start + X (held): SysId quasistatic reverse on drivetrain.
-// 
+// Start button: reseed field-centric heading when pressed alone.
+// Start + Y (held): SysId quasistatic forward on drivetrain (overrides drive while held).
+// Start + X (held): SysId quasistatic reverse on drivetrain (overrides drive while held).
+//
+// LEDs (CANdle):
+//   Default command lights green when LimelightShooter sees a target on the watched pipeline; off otherwise.
+//
 // Notes:
-// Default command is field-centric drive; MaxSpeed is scaled by kSpeed=1.0.
-// SysId bindings require robot in a safe state; they override normal driving while held.
-// LimelightShooter: Targeting is enabled/disabled inside the aim commands; 
+// Default command is field-centric drive; MaxSpeed is scaled by kSpeed=1.0 then by SpeedMode scale.
+// SysId bindings require robot in a safe state; they override normal driving while active.
+// LimelightShooter: Data is updated in its periodic; keep subsystem scheduled.
 //This file is loacted C:\Users\Team 811\FRC\2025-Robot-Code-new\2025-Robot-Code-new\src\main\java\frc\robot
 //            Ensure the tag pipeline is active and LEDs on when using triggers.
 package frc.robot;
